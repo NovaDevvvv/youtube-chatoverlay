@@ -1256,8 +1256,12 @@ class MainWindow(QMainWindow):
 
         self._apply_styles()
         self.load_settings()
+        self.update_timer = QTimer(self)
+        self.update_timer.setInterval(30_000)
+        self.update_timer.timeout.connect(self.check_for_updates)
         if self.settings.value("autoUpdate", True, type=bool):
             QTimer.singleShot(1200, self.check_for_updates)
+            self.update_timer.start()
 
     def _apply_styles(self) -> None:
         self.setStyleSheet(

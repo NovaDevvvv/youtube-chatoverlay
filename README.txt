@@ -7,6 +7,11 @@ SETUP
 4. Paste the active livestream watch URL.
 5. Click Start.
 
+The installer does not require Git or a cloned repository. It creates a private
+.venv folder beside the application, installs the required components there,
+and verifies the app before completing. Python 3.10 or newer is the only system
+prerequisite.
+
 A direct https://www.youtube.com/watch?v=... URL is the fastest and most
 reliable source. Channel handles and channel URLs are also supported, but the
 channel must currently be live.
@@ -20,7 +25,8 @@ FEATURES
 - Draggable positioning mode and screen anchors.
 - Complete in-session message history.
 - CSV history export.
-- Automatic checks for the newest commit on the GitHub default branch.
+- Automatic update check at launch and every 30 seconds while running.
+- Updates track the newest commit on the GitHub default branch.
 
 PUBLISHING UPDATES
 1. Set GITHUB_REPOSITORY to owner/repository in
