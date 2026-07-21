@@ -49,3 +49,9 @@ TROUBLESHOOTING
 - Upcoming streams may not expose chat until they start.
 - Private, members-only, age-restricted, or sign-in-only streams may not work.
 - Use borderless-windowed mode for overlays over games.
+
+WINDOWS INSTALLER
+Run installer/build_installer.ps1 to compile the standard Inno Setup wizard at
+dist/Installer.exe. It bundles a SHA-256-verified private Python runtime, so end
+users need neither Python nor Git. It includes shortcuts, uninstall support, and
+remains compatible with automatic updates.

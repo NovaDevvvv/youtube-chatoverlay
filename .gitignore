@@ -7,3 +7,6 @@ package/
 *.egg-info/
 update.log
 .update-revision
+.github
+.__pycache__
+.installer
