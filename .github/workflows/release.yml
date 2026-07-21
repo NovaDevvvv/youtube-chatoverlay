@@ -1,0 +1,32 @@
+name: Publish release package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure release repository and version
+        shell: pwsh
+        run: |
+          $version = '${{ github.event.release.tag_name }}'.TrimStart('v')
+          $config = 'src/youtube_chat_overlay/config.py'
+          (Get-Content $config -Raw).Replace('GITHUB_REPOSITORY = ""', 'GITHUB_REPOSITORY = "${{ github.repository }}"').Replace('APP_VERSION = "1.0.0"', ('APP_VERSION = "{0}"' -f $version)) | Set-Content $config -Encoding utf8
+      - name: Build update archive
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path package | Out-Null
+          Copy-Item src,requirements.txt,pyproject.toml,run.bat,install.bat,README.txt package -Recurse
+          Compress-Archive -Path package\* -DestinationPath youtube-chat-overlay-windows.zip
+          $hash = (Get-FileHash youtube-chat-overlay-windows.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  youtube-chat-overlay-windows.zip" | Set-Content youtube-chat-overlay-windows.zip.sha256 -Encoding ascii
+      - name: Attach updater assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" youtube-chat-overlay-windows.zip youtube-chat-overlay-windows.zip.sha256 --clobber

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "youtube-live-chat-overlay"
+version = "1.0.0"
+description = "A configurable YouTube live-chat desktop overlay."
+requires-python = ">=3.10"
+dependencies = [
+    "PySide6>=6.7",
+    "requests>=2.31",
+]
+
+[project.scripts]
+youtube-chat-overlay = "youtube_chat_overlay.ui.application:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
