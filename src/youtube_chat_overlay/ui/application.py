@@ -1073,6 +1073,7 @@ class MainWindow(QMainWindow):
         self.update_service = UpdateService(Path(__file__).resolve().parents[3])
         self.update_worker: UpdateCheckWorker | UpdateDownloadWorker | None = None
         self.pending_build: BuildInfo | None = None
+        self.downloaded_update: tuple[Path, str] | None = None
 
         self.overlay = OverlayWindow()
         self.overlay.position_changed.connect(self._overlay_was_dragged)
@@ -1391,7 +1392,7 @@ class MainWindow(QMainWindow):
         worker.found.connect(self._update_available)
         worker.current.connect(lambda: self._update_check_current(manual))
         worker.failed.connect(lambda error: self._update_check_failed(error, manual))
-        worker.finished.connect(self._update_worker_finished)
+        worker.finished.connect(lambda current=worker: self._update_worker_finished(current))
         worker.start()
 
     def _update_available(self, build: BuildInfo) -> None:
@@ -1404,6 +1405,10 @@ class MainWindow(QMainWindow):
         except RuntimeError:
             pass
         self.update_button.clicked.connect(self.install_update)
+        self.update_status.setText(
+            f"Build {build.version} found — installing automatically…"
+        )
+        QTimer.singleShot(100, self.install_update)
 
     def _update_check_current(self, manual: bool) -> None:
         self.update_status.setText(f"You’re up to date · version {APP_VERSION}")
@@ -1415,23 +1420,25 @@ class MainWindow(QMainWindow):
         if manual:
             QMessageBox.warning(self, "Update check failed", error)
 
-    def _update_worker_finished(self) -> None:
+    def _update_worker_finished(self, worker) -> None:
         if self.pending_build is None:
             self.update_button.setEnabled(True)
-        if self.update_worker:
-            self.update_worker.deleteLater()
-        self.update_worker = None
+        worker.deleteLater()
+        if self.update_worker is worker:
+            self.update_worker = None
+        if isinstance(worker, UpdateDownloadWorker) and self.downloaded_update:
+            staged_dir, revision = self.downloaded_update
+            self.downloaded_update = None
+            self._begin_update_restart(staged_dir, revision)
 
     def install_update(self) -> None:
         build = self.pending_build
         if build is None:
             return
-        answer = QMessageBox.question(
-            self,
-            f"Install build {build.version}?",
-            f"The latest source will be downloaded, installed, and the app restarted.\n\n{build.notes[:800]}",
-        )
-        if answer != QMessageBox.StandardButton.Yes:
+        if isinstance(self.update_worker, UpdateCheckWorker) and self.update_worker.isRunning():
+            QTimer.singleShot(100, self.install_update)
+            return
+        if isinstance(self.update_worker, UpdateDownloadWorker) and self.update_worker.isRunning():
             return
         self.update_button.setEnabled(False)
         self.update_progress.setValue(0)
@@ -1442,17 +1449,22 @@ class MainWindow(QMainWindow):
         worker.progress.connect(self.update_progress.setValue)
         worker.ready.connect(self._update_downloaded)
         worker.failed.connect(self._update_install_failed)
-        worker.finished.connect(self._update_worker_finished)
+        worker.finished.connect(lambda current=worker: self._update_worker_finished(current))
         worker.start()
 
     def _update_downloaded(self, staged_dir: Path, revision: str) -> None:
+        self.downloaded_update = (staged_dir, revision)
+        self.update_progress.setValue(100)
+        self.update_status.setText("Update downloaded. Preparing restart…")
+
+    def _begin_update_restart(self, staged_dir: Path, revision: str) -> None:
         try:
             self.update_service.launch_installer(staged_dir, revision)
         except Exception as error:
             self._update_install_failed(str(error))
             return
         self.update_status.setText("Update ready. Restarting…")
-        QApplication.quit()
+        QTimer.singleShot(250, QApplication.quit)
 
     def _update_install_failed(self, error: str) -> None:
         self.update_progress.hide()

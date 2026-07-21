@@ -26,6 +26,7 @@ FEATURES
 - Complete in-session message history.
 - CSV history export.
 - Automatic update check at launch and every 30 seconds while running.
+- New builds install automatically and restart the application when ready.
 - Updates track the newest commit on the GitHub default branch.
 
 PUBLISHING UPDATES

@@ -5,3 +5,5 @@ dist/
 build/
 package/
 *.egg-info/
+update.log
+.update-revision

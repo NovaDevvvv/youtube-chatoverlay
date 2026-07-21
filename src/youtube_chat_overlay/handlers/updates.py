@@ -149,12 +149,17 @@ class UpdateService:
         executable = str(Path(sys.executable)).replace("'", "''")
         source_root = str(self.app_dir / "src").replace("'", "''")
         safe_revision = re.sub(r"[^a-fA-F0-9]", "", revision)
+        log_file = str(self.app_dir / "update.log").replace("'", "''")
         script.write_text(
             "$ErrorActionPreference = 'Stop'\n"
             f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue\n"
-            f"Copy-Item -Path '{source}\\*' -Destination '{app_dir}' -Recurse -Force\n"
-            f"Set-Content -Path '{app_dir}\\.update-revision' -Value '{safe_revision}' -Encoding ascii\n"
-            f"& '{executable}' -m pip install -r '{app_dir}\\requirements.txt' --disable-pip-version-check\n"
+            f"$log = '{log_file}'\n"
+            "try {\n"
+            f"  Copy-Item -Path '{source}\\*' -Destination '{app_dir}' -Recurse -Force\n"
+            f"  Set-Content -Path '{app_dir}\\.update-revision' -Value '{safe_revision}' -Encoding ascii\n"
+            f"  & '{executable}' -m pip install -r '{app_dir}\\requirements.txt' --disable-pip-version-check *>> $log\n"
+            "  if ($LASTEXITCODE -ne 0) { Add-Content $log 'Dependency refresh returned an error; restarting with existing dependencies.' }\n"
+            "} catch { $_ | Out-String | Add-Content $log }\n"
             f"$env:PYTHONPATH = '{source_root}'\n"
             f"Start-Process -FilePath '{executable}' -ArgumentList @('-m', 'youtube_chat_overlay') -WorkingDirectory '{app_dir}'\n",
             encoding="utf-8-sig",
