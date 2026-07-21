@@ -20,23 +20,22 @@ FEATURES
 - Draggable positioning mode and screen anchors.
 - Complete in-session message history.
 - CSV history export.
-- Automatic GitHub Release checks, downloads, and guided installation.
+- Automatic checks for the newest commit on the GitHub default branch.
 
 PUBLISHING UPDATES
-1. Push this project to GitHub and create a release with a tag such as v1.1.0.
-2. The included GitHub Actions workflow packages the app and attaches the ZIP
-   and SHA-256 checksum expected by the updater.
-3. Users are notified in the app and can install the release with one click.
+1. Set GITHUB_REPOSITORY to owner/repository in
+   src/youtube_chat_overlay/config.py.
+2. Push changes to the repository's default branch.
+3. Users are notified of the newest commit and can install it with one click.
 
-The workflow injects the GitHub owner/repository and release tag into the
-packaged app. For local testing, set GITHUB_REPOSITORY in
-src/youtube_chat_overlay/config.py or the
-YOUTUBE_OVERLAY_GITHUB_REPOSITORY environment variable.
+No compiled release asset is required. The updater downloads the source snapshot
+provided by GitHub for the newest commit. GITHUB_REPOSITORY may also be supplied
+through the YOUTUBE_OVERLAY_GITHUB_REPOSITORY environment variable.
 
 SOURCE LAYOUT
 - src/youtube_chat_overlay/ui: PySide6 windows, overlay, and presentation.
 - src/youtube_chat_overlay/handlers: update and external-service handlers.
-- src/youtube_chat_overlay/config.py: application identity and release settings.
+- src/youtube_chat_overlay/config.py: application identity and repository settings.
 
 TROUBLESHOOTING
 - The video must expose public live chat.

@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
 
 from ..config import APP_NAME, APP_VERSION
 from ..handlers.updates import (
-    ReleaseInfo,
+    BuildInfo,
     UpdateCheckWorker,
     UpdateDownloadWorker,
     UpdateService,
@@ -1072,7 +1072,7 @@ class MainWindow(QMainWindow):
         self._updating_position = False
         self.update_service = UpdateService(Path(__file__).resolve().parents[3])
         self.update_worker: UpdateCheckWorker | UpdateDownloadWorker | None = None
-        self.pending_release: ReleaseInfo | None = None
+        self.pending_build: BuildInfo | None = None
 
         self.overlay = OverlayWindow()
         self.overlay.position_changed.connect(self._overlay_was_dragged)
@@ -1381,7 +1381,7 @@ class MainWindow(QMainWindow):
         if self.update_worker and self.update_worker.isRunning():
             return
         self.update_button.setEnabled(False)
-        self.update_status.setText("Checking GitHub Releases…")
+        self.update_status.setText("Checking the latest GitHub build…")
         worker = UpdateCheckWorker(self.update_service, self)
         self.update_worker = worker
         worker.found.connect(self._update_available)
@@ -1390,9 +1390,9 @@ class MainWindow(QMainWindow):
         worker.finished.connect(self._update_worker_finished)
         worker.start()
 
-    def _update_available(self, release: ReleaseInfo) -> None:
-        self.pending_release = release
-        self.update_status.setText(f"Version {release.version} is ready — {release.title}")
+    def _update_available(self, build: BuildInfo) -> None:
+        self.pending_build = build
+        self.update_status.setText(f"Build {build.version} is ready — {build.title}")
         self.update_button.setText("Install update")
         self.update_button.setEnabled(True)
         try:
@@ -1412,28 +1412,28 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Update check failed", error)
 
     def _update_worker_finished(self) -> None:
-        if self.pending_release is None:
+        if self.pending_build is None:
             self.update_button.setEnabled(True)
         if self.update_worker:
             self.update_worker.deleteLater()
         self.update_worker = None
 
     def install_update(self) -> None:
-        release = self.pending_release
-        if release is None:
+        build = self.pending_build
+        if build is None:
             return
         answer = QMessageBox.question(
             self,
-            f"Install version {release.version}?",
-            f"The update will download, install, and restart the app.\n\n{release.notes[:800]}",
+            f"Install build {build.version}?",
+            f"The latest source will be downloaded, installed, and the app restarted.\n\n{build.notes[:800]}",
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
         self.update_button.setEnabled(False)
         self.update_progress.setValue(0)
         self.update_progress.show()
-        self.update_status.setText(f"Downloading version {release.version}…")
-        worker = UpdateDownloadWorker(self.update_service, release, self)
+        self.update_status.setText(f"Downloading build {build.version}…")
+        worker = UpdateDownloadWorker(self.update_service, build, self)
         self.update_worker = worker
         worker.progress.connect(self.update_progress.setValue)
         worker.ready.connect(self._update_downloaded)
@@ -1441,9 +1441,9 @@ class MainWindow(QMainWindow):
         worker.finished.connect(self._update_worker_finished)
         worker.start()
 
-    def _update_downloaded(self, staged_dir: Path) -> None:
+    def _update_downloaded(self, staged_dir: Path, revision: str) -> None:
         try:
-            self.update_service.launch_installer(staged_dir)
+            self.update_service.launch_installer(staged_dir, revision)
         except Exception as error:
             self._update_install_failed(str(error))
             return
